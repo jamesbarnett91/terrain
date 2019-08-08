@@ -17,6 +17,7 @@ import info.laht.threekt.renderers.WebGLRendererParams
 import info.laht.threekt.scenes.Scene
 import kotlin.browser.document
 import kotlin.browser.window
+import kotlin.math.pow
 
 class Terrain {
 
@@ -30,14 +31,19 @@ class Terrain {
 
   private val size: Int = 256
 
-  val zoomFactor = 80
-  val scalingFactor = 11
-  val autoRotate = false
+  enum class ScalingType {
+    LINEAR, EXPONENTIAL
+  }
 
-  val waterHeight = 5
-  val snowHeightThreshold = 15
+  var zoomFactor = 80
+  var scalingFactor = 11
+  var scalingType = ScalingType.LINEAR
+  var autoRotate = false
 
-  val showWireframe = false
+  var waterHeight = 5
+  var snowHeightThreshold = 15
+
+  var showWireframe = false
 
   init {
 
@@ -109,9 +115,15 @@ class Terrain {
 
           var noise = simplexNoise.noise2D(x / zoomFactor.toDouble(), y / zoomFactor.toDouble())
           noise += (0.01 * simplexNoise.noise2D(x.toDouble(), y.toDouble()))
-
           noise += 1
-          noise *= scalingFactor
+
+          // have to toString here for JS interop
+          if (scalingType.toString() == ScalingType.LINEAR.toString()) {
+            noise *= scalingFactor
+          } else {
+            noise = noise.pow(scalingFactor)
+          }
+
           terrainGeom.vertices[x + (y * size)].setZ(noise)
         }
       }
@@ -206,7 +218,9 @@ class Terrain {
         .step(1)
         .onChange { generateTerrain() }
       }
-
+      it.add(this, "scalingType", ScalingType.values()).onChange {
+        generateTerrain()
+      }
       it.add(this, "reseedNoise")
       it.add(this, "showWireframe").onChange { generateTerrain() }
       it.add(this, "autoRotate")
