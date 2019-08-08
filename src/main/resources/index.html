@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Terrain</title>
+
+  <script type="text/javascript" src="deps/three.min.js"></script>
+  <script type="text/javascript" src="deps/OrbitControls.js"></script>
+  <script type="text/javascript" src="deps/dat.gui.min.js"></script>
+  <script type="text/javascript" src="deps/simplex-noise.min.js"></script>
+
+  <script type="text/javascript" src="kotlin/kotlin.js"></script>
+  <script type="text/javascript" src="kotlin/threejs-wrapper.js"></script>
+  <script type="text/javascript" src="kotlin/terrain.js"></script>
+  <style>
+    body {
+      padding: 0;
+      margin: 0;
+    }
+  </style>
+</head>
+  <body>
+
+    <div id="container"></div>
+
+    <script>
+      new terrain.Terrain().animate()
+    </script>
+
+  </body>
+</html>
