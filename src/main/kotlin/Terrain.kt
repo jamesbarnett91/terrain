@@ -15,6 +15,7 @@ import info.laht.threekt.objects.Mesh
 import info.laht.threekt.renderers.WebGLRenderer
 import info.laht.threekt.renderers.WebGLRendererParams
 import info.laht.threekt.scenes.Scene
+import org.w3c.fetch.Request
 import kotlin.browser.document
 import kotlin.browser.window
 import kotlin.math.pow
@@ -35,17 +36,18 @@ class Terrain {
     LINEAR, EXPONENTIAL
   }
 
-  var zoomFactor = 80
-  var scalingFactor = 11
-  var scalingType = ScalingType.LINEAR
-  var autoRotate = false
-
-  var waterHeight = 5
-  var snowHeightThreshold = 15
-
-  var showWireframe = false
+  var options = GenerateOptions(
+    80,
+    11.0,
+    ScalingType.LINEAR.name,
+    false,
+    5,
+    15,
+    false)
 
   init {
+
+    initGui()
 
     scene.add(AmbientLight(0xeeeeee))
 
@@ -66,8 +68,6 @@ class Terrain {
       }
 
     controls = OrbitControls(camera, renderer.domElement)
-
-    initGui()
 
     seedNoise()
 
@@ -113,15 +113,16 @@ class Terrain {
           terrainGeom.vertices[x + (y*size)].setZ(0)
         } else {
 
-          var noise = simplexNoise.noise2D(x / zoomFactor.toDouble(), y / zoomFactor.toDouble())
+          var noise = simplexNoise.noise2D(x / options.zoomFactor.toDouble(), y / options.zoomFactor.toDouble())
           noise += (0.01 * simplexNoise.noise2D(x.toDouble(), y.toDouble()))
           noise += 1
 
           // have to toString here for JS interop
-          if (scalingType.toString() == ScalingType.LINEAR.toString()) {
-            noise *= scalingFactor
+          if (options.scalingType == ScalingType.LINEAR.toString()) {
+            noise *= options.scalingFactor
           } else {
-            noise = noise.pow(scalingFactor)
+            noise += 1
+            noise = noise.pow(options.scalingFactor)
           }
 
           terrainGeom.vertices[x + (y * size)].setZ(noise)
@@ -137,7 +138,7 @@ class Terrain {
 
     val terrainMaterial = MeshPhongMaterial()
       .apply {
-        if (showWireframe) {
+        if (options.showWireframe) {
           wireframe = true
           wireframeLinewidth = 1.0
         }
@@ -154,9 +155,9 @@ class Terrain {
       val vertexes = listOf(planeGeometry.vertices[face.a].z, planeGeometry.vertices[face.b].z, planeGeometry.vertices[face.c].z)
       val min = vertexes.min()!!
 
-      if (min < snowHeightThreshold) {
+      if (min < options.snowHeightThreshold) {
         face.color?.set(ColorConstants.forestgreen)
-      } else if (min >= snowHeightThreshold) {
+      } else if (min >= options.snowHeightThreshold) {
         face.color?.set(ColorConstants.floralwhite)
       }
     }
@@ -168,7 +169,7 @@ class Terrain {
       scene.remove(waterMesh)
     }
 
-    val waterGeom = BoxGeometry(99, 99, waterHeight)
+    val waterGeom = BoxGeometry(99, 99, options.waterHeight)
     val waterMaterial = MeshBasicMaterial()
       .apply {
         color.set(ColorConstants.aqua)
@@ -179,64 +180,81 @@ class Terrain {
     waterMesh = Mesh(waterGeom, waterMaterial)
       .also {
         scene.add(it)
-        it.translateZ(waterHeight/2)
+        it.translateZ(options.waterHeight/2)
       }
   }
 
   @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
   fun initGui() {
-    dat.GUI(
-      GUIParams(
-        closed = false
-      )
-    ).also {
 
-      (it.add(this, "zoomFactor") as NumberController).apply {
-        min(10)
-        .max(200)
-        .step(5)
-        .onChange { generateTerrain() }
-      }
+    window.fetch(Request("presets.json")).then { r ->
+      r.text().then { presets ->
 
-      (it.add(this, "scalingFactor") as NumberController).apply {
-        min(0)
-        .max(50)
-        .step(1)
-        .onChange { generateTerrain() }
-      }
+        dat.GUI(
+          GUIParams(
+            closed = false,
+            width = 250,
+            load = JSON.parse(presets)
 
-      (it.add(this, "waterHeight") as NumberController).apply {
-        min(0)
-        .max(30)
-        .step(1)
-        .onChange { generateWater() }
-      }
+          )
+        ).also {
+          it.remember(this.options)
 
-      (it.add(this, "snowHeightThreshold") as NumberController).apply {
-        min(0)
-        .max(30)
-        .step(1)
-        .onChange { generateTerrain() }
+          (it.add(this.options, "zoomFactor") as NumberController).apply {
+            min(10)
+              .max(200)
+              .step(5)
+              .onFinishChange { generateTerrain() }
+          }
+
+          (it.add(this.options, "scalingFactor") as NumberController).apply {
+            min(0)
+              .max(50)
+              .step(0.1)
+              .onFinishChange { generateTerrain() }
+          }
+
+          (it.add(this.options, "waterHeight") as NumberController).apply {
+            min(0)
+              .max(30)
+              .step(1)
+              .onFinishChange { generateWater() }
+          }
+
+          (it.add(this.options, "snowHeightThreshold") as NumberController).apply {
+            min(0)
+              .max(30)
+              .step(1)
+              .onFinishChange { generateTerrain() }
+          }
+          it.add(this.options, "scalingType", ScalingType.values()).onChange {
+            generateTerrain()
+          }
+          it.add(this, "reseedNoise")
+          it.add(this.options, "showWireframe").onChange { generateTerrain() }
+          it.add(this.options, "autoRotate")
+        }
+
       }
-      it.add(this, "scalingType", ScalingType.values()).onChange {
-        generateTerrain()
-      }
-      it.add(this, "reseedNoise")
-      it.add(this, "showWireframe").onChange { generateTerrain() }
-      it.add(this, "autoRotate")
     }
+
+
   }
 
   fun animate() {
 
-    window.requestAnimationFrame {
-      if (autoRotate) {
-        terrainMesh.rotation.z += 0.005
-        waterMesh.rotation.z += 0.005
+    window.setTimeout({
+
+      window.requestAnimationFrame {
+        if (options.autoRotate) {
+          terrainMesh.rotation.z += 0.005
+          waterMesh.rotation.z += 0.005
 //        println("x:${camera.position.x} y: ${camera.position.y} z:${camera.position.z}")
+        }
+        animate()
       }
-      animate()
-    }
+
+    }, 1000/30)
 
     renderer.render(scene, camera)
   }

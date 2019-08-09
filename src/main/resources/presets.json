@@ -1,0 +1,51 @@
+{
+  "preset": "Mountainous",
+  "remembered": {
+    "Mountain": {
+      "0": {
+        "zoomFactor": 80,
+        "scalingFactor": 2.9,
+        "scalingType": "EXPONENTIAL",
+        "autoRotate": false,
+        "waterHeight": 4,
+        "snowHeightThreshold": 16,
+        "showWireframe": false
+      }
+    },
+    "Flat": {
+      "0": {
+        "zoomFactor": 100,
+        "scalingFactor": 2.5,
+        "scalingType": "EXPONENTIAL",
+        "autoRotate": false,
+        "waterHeight": 3,
+        "snowHeightThreshold": 15,
+        "showWireframe": false
+      }
+    },
+    "Dense": {
+      "0": {
+        "zoomFactor": 45,
+        "scalingFactor": 2.8,
+        "scalingType": "EXPONENTIAL",
+        "autoRotate": false,
+        "waterHeight": 3,
+        "snowHeightThreshold": 15,
+        "showWireframe": false
+      }
+    },
+    "Marsh": {
+      "0": {
+        "zoomFactor": 55,
+        "scalingFactor": 2.5,
+        "scalingType": "LINEAR",
+        "autoRotate": false,
+        "waterHeight": 3,
+        "snowHeightThreshold": 15,
+        "showWireframe": false
+      }
+    }
+  },
+  "closed": false,
+  "folders": {}
+}
