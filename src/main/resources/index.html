@@ -12,16 +12,16 @@
   <script type="text/javascript" src="kotlin/kotlin.js"></script>
   <script type="text/javascript" src="kotlin/threejs-wrapper.js"></script>
   <script type="text/javascript" src="kotlin/terrain.js"></script>
-  <style>
-    body {
-      padding: 0;
-      margin: 0;
-    }
-  </style>
+
+  <link rel="stylesheet" type="text/css" href="style.css">
 </head>
   <body>
 
     <div id="container"></div>
+    <div id="loading-overlay" class="hidden">
+      hello
+      <div id="spinner"></div>
+    </div>
 
     <script>
       new terrain.Terrain().animate()

@@ -18,6 +18,8 @@ import info.laht.threekt.scenes.Scene
 import org.w3c.fetch.Request
 import kotlin.browser.document
 import kotlin.browser.window
+import kotlin.dom.addClass
+import kotlin.dom.removeClass
 import kotlin.math.pow
 
 class Terrain {
@@ -38,11 +40,11 @@ class Terrain {
 
   var options = GenerateOptions(
     80,
-    11.0,
-    ScalingType.LINEAR.name,
+    2.9,
+    ScalingType.EXPONENTIAL.name,
     false,
-    5,
-    15,
+    4,
+    16,
     false)
 
   init {
@@ -73,8 +75,6 @@ class Terrain {
 
     generateTerrain()
 
-    generateWater()
-
     window.addEventListener("resize", {
       camera.aspect = window.innerWidth.toDouble() / window.innerHeight
       camera.updateProjectionMatrix()
@@ -98,7 +98,18 @@ class Terrain {
     generateTerrain()
   }
 
+  private fun regenerateTerrain() {
+    document.getElementById("loading-overlay")?.removeClass("hidden")
+    // without the setTimeout the loading overlay is never rendered
+    window.setTimeout({
+      generateTerrain()
+      document.getElementById("loading-overlay")?.addClass("hidden")
+    }, 10)
+  }
+
   private fun generateTerrain() {
+
+    val genStart = window.performance.now()
 
     if (this::terrainMesh.isInitialized) {
       scene.remove(terrainMesh)
@@ -148,6 +159,11 @@ class Terrain {
     terrainMesh = Mesh(terrainGeom, terrainMaterial)
       .apply { receiveShadows = true }
       .also(scene::add)
+
+    generateWater()
+
+    val genEnd = window.performance.now()
+    println("Terrain generation took ${genEnd - genStart} ms")
   }
 
   private fun applyHeightMapColour(planeGeometry: PlaneGeometry) {
@@ -204,40 +220,39 @@ class Terrain {
             min(10)
               .max(200)
               .step(5)
-              .onFinishChange { generateTerrain() }
+              .onFinishChange { regenerateTerrain() }
           }
 
           (it.add(this.options, "scalingFactor") as NumberController).apply {
             min(0)
               .max(50)
               .step(0.1)
-              .onFinishChange { generateTerrain() }
+              .onFinishChange { regenerateTerrain() }
           }
 
           (it.add(this.options, "waterHeight") as NumberController).apply {
             min(0)
               .max(30)
               .step(1)
-              .onFinishChange { generateWater() }
+              .onChange { generateWater() }
           }
 
           (it.add(this.options, "snowHeightThreshold") as NumberController).apply {
             min(0)
               .max(30)
               .step(1)
-              .onFinishChange { generateTerrain() }
+              .onFinishChange { regenerateTerrain() }
           }
-          it.add(this.options, "scalingType", ScalingType.values()).onChange {
-            generateTerrain()
+          it.add(this.options, "scalingType", Terrain.ScalingType.values()).onChange {
+            regenerateTerrain()
           }
           it.add(this, "reseedNoise")
-          it.add(this.options, "showWireframe").onChange { generateTerrain() }
+          it.add(this.options, "showWireframe").onChange { regenerateTerrain() }
           it.add(this.options, "autoRotate")
         }
 
       }
     }
-
 
   }
 
