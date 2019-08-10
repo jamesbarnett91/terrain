@@ -7,9 +7,11 @@ import info.laht.threekt.external.libs.datgui.dat
 import info.laht.threekt.geometries.BoxGeometry
 import info.laht.threekt.geometries.PlaneGeometry
 import info.laht.threekt.lights.AmbientLight
-import info.laht.threekt.lights.PointLight
-import info.laht.threekt.materials.MeshBasicMaterial
+import info.laht.threekt.lights.DirectionalLight
+import info.laht.threekt.lights.Light
+import info.laht.threekt.loaders.TextureLoader
 import info.laht.threekt.materials.MeshPhongMaterial
+import info.laht.threekt.math.Color
 import info.laht.threekt.math.ColorConstants
 import info.laht.threekt.objects.Mesh
 import info.laht.threekt.renderers.WebGLRenderer
@@ -20,6 +22,7 @@ import kotlin.browser.document
 import kotlin.browser.window
 import kotlin.dom.addClass
 import kotlin.dom.removeClass
+import kotlin.math.PI
 import kotlin.math.pow
 
 class Terrain {
@@ -31,6 +34,7 @@ class Terrain {
   private lateinit var simplexNoise: SimplexNoise
   private lateinit var terrainMesh: Mesh
   private lateinit var waterMesh: Mesh
+  private var light: Light
 
   private val size: Int = 256
 
@@ -53,19 +57,19 @@ class Terrain {
 
     scene.add(AmbientLight(0xeeeeee))
 
-    PointLight(0xffffff)
+    light = DirectionalLight(0xffffff, 0.8)
       .apply {
         castShadow = true
-        position.set(0, 90, 200)
-      }.also(scene::add)
+        position.set(60, 170, -110)
+      }
+      .also(scene::add)
 
     camera = PerspectiveCamera(75, window.innerWidth.toDouble() / window.innerHeight, 0.1, 1000)
-    camera.position.setZ(45)
-    camera.position.setY(-73)
+    camera.position.set(0, 57, 76)
 
     renderer = WebGLRenderer(WebGLRendererParams(antialias = true))
       .apply {
-        setClearColor(ColorConstants.black, 1)
+        setClearColor(ColorConstants.skyblue, 1)
         setSize(window.innerWidth, window.innerHeight)
       }
 
@@ -95,7 +99,7 @@ class Terrain {
 
   fun reseedNoise() {
     seedNoise()
-    generateTerrain()
+    regenerateTerrain()
   }
 
   private fun regenerateTerrain() {
@@ -157,13 +161,16 @@ class Terrain {
       }
 
     terrainMesh = Mesh(terrainGeom, terrainMaterial)
-      .apply { receiveShadows = true }
+      .apply {
+        receiveShadows = true
+        rotation.x = -PI / 2
+      }
       .also(scene::add)
-
-    generateWater()
 
     val genEnd = window.performance.now()
     println("Terrain generation took ${genEnd - genStart} ms")
+
+    generateWater()
   }
 
   private fun applyHeightMapColour(planeGeometry: PlaneGeometry) {
@@ -185,19 +192,28 @@ class Terrain {
       scene.remove(waterMesh)
     }
 
-    val waterGeom = BoxGeometry(99, 99, options.waterHeight)
-    val waterMaterial = MeshBasicMaterial()
+    waterMesh = Water(BoxGeometry(99,99, options.waterHeight),
+      WaterParams(
+        waterNormals = TextureLoader().load("waternormals.jpg", {
+          it.wrapS = THREE.RepeatWrapping
+          it.wrapT = THREE.RepeatWrapping
+        }),
+        alpha = 1.0,
+        sunDirection = light.position.clone().normalize(),
+        sunColor = Color(0xffffff),
+        waterColor = Color(0x001e0f),
+        distortionScale = 5.0
+      ))
       .apply {
-        color.set(ColorConstants.aqua)
-        transparent = true
-        opacity = 0.7
+        receiveShadows = true
+        translateZ(options.waterHeight)
+        rotation.x = -PI / 2
+        position.set(0, options.waterHeight / 2 , 0)
       }
+      .also(scene::add)
 
-    waterMesh = Mesh(waterGeom, waterMaterial)
-      .also {
-        scene.add(it)
-        it.translateZ(options.waterHeight/2)
-      }
+    var waterMeshJsVar = waterMesh
+    js("waterMeshJsVar.material.uniforms.size.value = 7")
   }
 
   @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
@@ -266,6 +282,8 @@ class Terrain {
           waterMesh.rotation.z += 0.005
 //        println("x:${camera.position.x} y: ${camera.position.y} z:${camera.position.z}")
         }
+        var waterMeshJsVar = waterMesh
+        js("waterMeshJsVar.material.uniforms[ 'time' ].value += 1.0 / 60.0;")
         animate()
       }
 
