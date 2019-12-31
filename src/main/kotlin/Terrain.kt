@@ -45,15 +45,9 @@ class Terrain {
 
   private val size: Int = 256
 
-  enum class ScalingType {
-    LINEAR, EXPONENTIAL
-  }
-
   var options = GenerateOptions(
     80,
     2.9,
-    ScalingType.EXPONENTIAL.name,
-    false,
     4,
     16,
     false)
@@ -109,15 +103,6 @@ class Terrain {
     regenerateTerrain()
   }
 
-  private fun regenerateTerrain() {
-    document.getElementById("loading-overlay")?.removeClass("hidden")
-    // without the setTimeout the loading overlay is never rendered
-    window.setTimeout({
-      generateTerrain()
-      document.getElementById("loading-overlay")?.addClass("hidden")
-    }, 10)
-  }
-
   private fun generateTerrain() {
 
     val genStart = window.performance.now()
@@ -140,15 +125,9 @@ class Terrain {
           var noise = simplexNoise.noise2D(x / options.zoomFactor.toDouble(), y / options.zoomFactor.toDouble())
           // add some fine noise
           noise += (0.03 * simplexNoise.noise2D(x/15.toDouble(), y/15.toDouble()))
-          noise += 1
+          noise += 2
 
-          // have to toString here for JS interop
-          if (options.scalingType == ScalingType.LINEAR.toString()) {
-            noise *= options.scalingFactor
-          } else {
-            noise += 1
-            noise = noise.pow(options.scalingFactor)
-          }
+          noise = noise.pow(options.scalingFactor)
 
           terrainGeometry.vertices[x + (y * size)].setZ(noise)
         }
@@ -183,17 +162,13 @@ class Terrain {
     generateWater()
   }
 
-  private fun applyHeightMapColour(planeGeometry: PlaneGeometry) {
-    planeGeometry.faces.forEach { face ->
-      val vertexes = listOf(planeGeometry.vertices[face.a].z, planeGeometry.vertices[face.b].z, planeGeometry.vertices[face.c].z)
-      val min = vertexes.min()!!
-
-      if (min < options.snowHeightThreshold) {
-        face.color?.set(ColorConstants.forestgreen)
-      } else if (min >= options.snowHeightThreshold) {
-        face.color?.set(ColorConstants.floralwhite)
-      }
-    }
+  private fun regenerateTerrain() {
+    document.getElementById("loading-overlay")?.removeClass("hidden")
+    // without the setTimeout the loading overlay is never rendered
+    window.setTimeout({
+      generateTerrain()
+      document.getElementById("loading-overlay")?.addClass("hidden")
+    }, 10)
   }
 
   private fun generateWater() {
@@ -230,6 +205,19 @@ class Terrain {
 
     var waterMeshJsVar = waterMesh
     js("waterMeshJsVar.material.uniforms.size.value = 7")
+  }
+
+  private fun applyHeightMapColour(planeGeometry: PlaneGeometry) {
+    planeGeometry.faces.forEach { face ->
+      val vertexes = listOf(planeGeometry.vertices[face.a].z, planeGeometry.vertices[face.b].z, planeGeometry.vertices[face.c].z)
+      val min = vertexes.min()!!
+
+      if (min < options.snowHeightThreshold) {
+        face.color?.set(ColorConstants.forestgreen)
+      } else if (min >= options.snowHeightThreshold) {
+        face.color?.set(ColorConstants.floralwhite)
+      }
+    }
   }
 
   @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
@@ -275,12 +263,10 @@ class Terrain {
               .step(1)
               .onFinishChange { regenerateTerrain() }
           }
-          it.add(this.options, "scalingType", Terrain.ScalingType.values()).onChange {
-            regenerateTerrain()
-          }
+
           it.add(this, "reseedNoise")
           it.add(this.options, "showWireframe").onChange { regenerateTerrain() }
-          it.add(this.options, "autoRotate")
+          it.add(controls, "autoRotate")
         }
 
       }
@@ -293,9 +279,8 @@ class Terrain {
     window.setTimeout({
 
       window.requestAnimationFrame {
-        if (options.autoRotate) {
-          terrainMesh.rotation.z += 0.005
-          waterMesh.rotation.z += 0.005
+        if (controls.autoRotate) {
+          controls.update()
 //        println("x:${camera.position.x} y: ${camera.position.y} z:${camera.position.z}")
         }
         var waterMeshJsVar = waterMesh

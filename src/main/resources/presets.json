@@ -5,7 +5,6 @@
       "0": {
         "zoomFactor": 80,
         "scalingFactor": 2.9,
-        "scalingType": "EXPONENTIAL",
         "autoRotate": false,
         "waterHeight": 5,
         "snowHeightThreshold": 16,
@@ -16,7 +15,6 @@
       "0": {
         "zoomFactor": 100,
         "scalingFactor": 2.5,
-        "scalingType": "EXPONENTIAL",
         "autoRotate": false,
         "waterHeight": 3,
         "snowHeightThreshold": 15,
@@ -27,7 +25,6 @@
       "0": {
         "zoomFactor": 45,
         "scalingFactor": 2.8,
-        "scalingType": "EXPONENTIAL",
         "autoRotate": false,
         "waterHeight": 6,
         "snowHeightThreshold": 15,
@@ -37,8 +34,7 @@
     "Marsh": {
       "0": {
         "zoomFactor": 55,
-        "scalingFactor": 2.5,
-        "scalingType": "LINEAR",
+        "scalingFactor": 1.5,
         "autoRotate": false,
         "waterHeight": 3,
         "snowHeightThreshold": 15,
