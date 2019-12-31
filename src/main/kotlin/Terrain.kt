@@ -1,5 +1,6 @@
 import info.laht.threekt.THREE
 import info.laht.threekt.cameras.PerspectiveCamera
+import info.laht.threekt.core.Geometry
 import info.laht.threekt.external.controls.OrbitControls
 import info.laht.threekt.external.libs.datgui.GUIParams
 import info.laht.threekt.external.libs.datgui.NumberController
@@ -10,6 +11,7 @@ import info.laht.threekt.lights.AmbientLight
 import info.laht.threekt.lights.DirectionalLight
 import info.laht.threekt.lights.Light
 import info.laht.threekt.loaders.TextureLoader
+import info.laht.threekt.materials.Material
 import info.laht.threekt.materials.MeshPhongMaterial
 import info.laht.threekt.math.Color
 import info.laht.threekt.math.ColorConstants
@@ -17,6 +19,7 @@ import info.laht.threekt.objects.Mesh
 import info.laht.threekt.renderers.WebGLRenderer
 import info.laht.threekt.renderers.WebGLRendererParams
 import info.laht.threekt.scenes.Scene
+import info.laht.threekt.textures.Texture
 import org.w3c.fetch.Request
 import kotlin.browser.document
 import kotlin.browser.window
@@ -32,7 +35,11 @@ class Terrain {
   private val camera: PerspectiveCamera
   private val controls: OrbitControls
   private lateinit var simplexNoise: SimplexNoise
+  private lateinit var terrainMaterial: Material
+  private lateinit var terrainGeometry: PlaneGeometry
   private lateinit var terrainMesh: Mesh
+  private lateinit var waterGeometry: Geometry
+  private lateinit var waterTexture: Texture
   private lateinit var waterMesh: Mesh
   private var light: Light
 
@@ -65,7 +72,7 @@ class Terrain {
       .also(scene::add)
 
     camera = PerspectiveCamera(75, window.innerWidth.toDouble() / window.innerHeight, 0.1, 1000)
-    camera.position.set(0, 57, 76)
+    camera.position.set(0, 49, 65)
 
     renderer = WebGLRenderer(WebGLRendererParams(antialias = true))
       .apply {
@@ -116,20 +123,23 @@ class Terrain {
     val genStart = window.performance.now()
 
     if (this::terrainMesh.isInitialized) {
+      terrainMaterial.dispose()
+      terrainGeometry.dispose()
       scene.remove(terrainMesh)
     }
 
-    val terrainGeom = PlaneGeometry(100,100, size-1, size-1)
+    terrainGeometry = PlaneGeometry(100,100, size-1, size-1)
 
     for (x in 0 until size) {
       for (y in 0 until size) {
 
         if (x == 0 || x == size-1 || y == 0 || y == size-1) {
-          terrainGeom.vertices[x + (y*size)].setZ(0)
+          terrainGeometry.vertices[x + (y*size)].setZ(0)
         } else {
 
           var noise = simplexNoise.noise2D(x / options.zoomFactor.toDouble(), y / options.zoomFactor.toDouble())
-          noise += (0.01 * simplexNoise.noise2D(x.toDouble(), y.toDouble()))
+          // add some fine noise
+          noise += (0.03 * simplexNoise.noise2D(x/15.toDouble(), y/15.toDouble()))
           noise += 1
 
           // have to toString here for JS interop
@@ -140,18 +150,18 @@ class Terrain {
             noise = noise.pow(options.scalingFactor)
           }
 
-          terrainGeom.vertices[x + (y * size)].setZ(noise)
+          terrainGeometry.vertices[x + (y * size)].setZ(noise)
         }
       }
     }
 
-    applyHeightMapColour(terrainGeom)
+    applyHeightMapColour(terrainGeometry)
 
-    terrainGeom.computeFaceNormals()
-    terrainGeom.computeVertexNormals()
-    terrainGeom.colorsNeedUpdate = true
+    terrainGeometry.computeFaceNormals()
+    terrainGeometry.computeVertexNormals()
+    terrainGeometry.colorsNeedUpdate = true
 
-    val terrainMaterial = MeshPhongMaterial()
+    terrainMaterial = MeshPhongMaterial()
       .apply {
         if (options.showWireframe) {
           wireframe = true
@@ -160,7 +170,7 @@ class Terrain {
         vertexColors = THREE.FaceColors
       }
 
-    terrainMesh = Mesh(terrainGeom, terrainMaterial)
+    terrainMesh = Mesh(terrainGeometry, terrainMaterial)
       .apply {
         receiveShadows = true
         rotation.x = -PI / 2
@@ -189,15 +199,21 @@ class Terrain {
   private fun generateWater() {
 
     if (this::waterMesh.isInitialized) {
+      waterTexture.dispose()
+      waterGeometry.dispose()
       scene.remove(waterMesh)
     }
 
-    waterMesh = Water(BoxGeometry(99,99, options.waterHeight),
+    waterGeometry = BoxGeometry(99,99, options.waterHeight)
+
+    waterTexture = TextureLoader().load("waternormals.jpg", {
+      it.wrapS = THREE.RepeatWrapping
+      it.wrapT = THREE.RepeatWrapping
+    })
+
+    waterMesh = Water(waterGeometry,
       WaterParams(
-        waterNormals = TextureLoader().load("waternormals.jpg", {
-          it.wrapS = THREE.RepeatWrapping
-          it.wrapT = THREE.RepeatWrapping
-        }),
+        waterNormals = waterTexture,
         alpha = 1.0,
         sunDirection = light.position.clone().normalize(),
         sunColor = Color(0xffffff),

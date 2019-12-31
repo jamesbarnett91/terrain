@@ -7,7 +7,7 @@
         "scalingFactor": 2.9,
         "scalingType": "EXPONENTIAL",
         "autoRotate": false,
-        "waterHeight": 4,
+        "waterHeight": 5,
         "snowHeightThreshold": 16,
         "showWireframe": false
       }
@@ -29,7 +29,7 @@
         "scalingFactor": 2.8,
         "scalingType": "EXPONENTIAL",
         "autoRotate": false,
-        "waterHeight": 3,
+        "waterHeight": 6,
         "snowHeightThreshold": 15,
         "showWireframe": false
       }
