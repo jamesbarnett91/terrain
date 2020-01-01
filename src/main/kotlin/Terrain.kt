@@ -50,7 +50,8 @@ class Terrain {
     2.9,
     4,
     16,
-    false)
+    false
+  )
 
   init {
 
@@ -75,6 +76,7 @@ class Terrain {
       }
 
     controls = OrbitControls(camera, renderer.domElement)
+    controls.autoRotate = true
 
     seedNoise()
 
@@ -113,18 +115,19 @@ class Terrain {
       scene.remove(terrainMesh)
     }
 
-    terrainGeometry = PlaneGeometry(100,100, size-1, size-1)
+    terrainGeometry = PlaneGeometry(100, 100, size - 1, size - 1)
 
     for (x in 0 until size) {
       for (y in 0 until size) {
 
-        if (x == 0 || x == size-1 || y == 0 || y == size-1) {
-          terrainGeometry.vertices[x + (y*size)].setZ(0)
+        if (x == 0 || x == size - 1 || y == 0 || y == size - 1) {
+          terrainGeometry.vertices[x + (y * size)].setZ(0)
         } else {
 
           var noise = simplexNoise.noise2D(x / options.zoomFactor.toDouble(), y / options.zoomFactor.toDouble())
           // add some fine noise
-          noise += (0.03 * simplexNoise.noise2D(x/15.toDouble(), y/15.toDouble()))
+          noise += (0.03 * simplexNoise.noise2D(x / 15.toDouble(), y / 15.toDouble()))
+          noise += (0.01 * simplexNoise.noise2D(x / 5.toDouble(), y / 5.toDouble()))
           noise += 2
 
           noise = noise.pow(options.scalingFactor)
@@ -179,14 +182,15 @@ class Terrain {
       scene.remove(waterMesh)
     }
 
-    waterGeometry = BoxGeometry(99,99, options.waterHeight)
+    waterGeometry = BoxGeometry(99, 99, options.waterHeight)
 
     waterTexture = TextureLoader().load("waternormals.jpg", {
       it.wrapS = THREE.RepeatWrapping
       it.wrapT = THREE.RepeatWrapping
     })
 
-    waterMesh = Water(waterGeometry,
+    waterMesh = Water(
+      waterGeometry,
       WaterParams(
         waterNormals = waterTexture,
         alpha = 1.0,
@@ -194,12 +198,13 @@ class Terrain {
         sunColor = Color(0xffffff),
         waterColor = Color(0x001e0f),
         distortionScale = 5.0
-      ))
+      )
+    )
       .apply {
         receiveShadows = true
         translateZ(options.waterHeight)
         rotation.x = -PI / 2
-        position.set(0, options.waterHeight / 2 , 0)
+        position.set(0, options.waterHeight / 2, 0)
       }
       .also(scene::add)
 
@@ -268,10 +273,8 @@ class Terrain {
           it.add(this.options, "showWireframe").onChange { regenerateTerrain() }
           it.add(controls, "autoRotate")
         }
-
       }
     }
-
   }
 
   fun animate() {
@@ -288,9 +291,8 @@ class Terrain {
         animate()
       }
 
-    }, 1000/30)
+    }, 1000 / 30)
 
     renderer.render(scene, camera)
   }
-
 }
