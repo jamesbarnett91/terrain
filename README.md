@@ -4,7 +4,7 @@ Procedural terrain generation in Kotlin and WebGL.
 
 Demo [here](https://jamesbarnett.io/terrain)
 
-![](https://jamesbarnett.io/files/terrain/terrain2.png)
+![](https://jamesbarnett.io/files/terrain/terrain3.png)
 
 The terrain height is determined using a [simplex noise](https://en.wikipedia.org/wiki/Simplex_noise) algorithm in multiple passes.
 
