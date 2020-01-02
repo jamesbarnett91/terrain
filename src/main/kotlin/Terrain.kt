@@ -13,12 +13,14 @@ import info.laht.threekt.lights.Light
 import info.laht.threekt.loaders.TextureLoader
 import info.laht.threekt.materials.Material
 import info.laht.threekt.materials.MeshPhongMaterial
+import info.laht.threekt.materials.ShaderMaterial
 import info.laht.threekt.math.Color
 import info.laht.threekt.math.ColorConstants
 import info.laht.threekt.objects.Mesh
 import info.laht.threekt.renderers.WebGLRenderer
 import info.laht.threekt.renderers.WebGLRendererParams
 import info.laht.threekt.scenes.Scene
+import info.laht.threekt.textures.CubeTexture
 import info.laht.threekt.textures.Texture
 import org.w3c.fetch.Request
 import kotlin.browser.document
@@ -59,7 +61,7 @@ class Terrain {
 
     scene.add(AmbientLight(0xeeeeee))
 
-    light = DirectionalLight(0xffffff, 0.8)
+    light = DirectionalLight(0xffffff, 1)
       .apply {
         castShadow = true
         position.set(60, 170, -110)
@@ -77,6 +79,8 @@ class Terrain {
 
     controls = OrbitControls(camera, renderer.domElement)
     controls.autoRotate = true
+
+    initSkybox()
 
     seedNoise()
 
@@ -225,6 +229,40 @@ class Terrain {
     }
   }
 
+  // TODO add wrapper for CubeTextureLoader and ShaderLib
+  private fun initSkybox() {
+    val cubeTexture = js(
+      """new THREE.CubeTextureLoader()
+      .setPath('skybox/')
+      .load([
+        'px.jpg',
+        'nx.jpg',
+        'py.jpg',
+        'ny.jpg',
+        'pz.jpg',
+        'nz.jpg'
+      ]);"""
+    ) as CubeTexture
+
+    cubeTexture.format = THREE.RGBFormat
+
+    val cubeShader = js("THREE.ShaderLib['cube'];")
+    js("cubeShader.uniforms['tCube'].value = cubeTexture;")
+
+    val skyboxMaterial = js(
+      """new THREE.ShaderMaterial({
+      fragmentShader: cubeShader.fragmentShader,
+      vertexShader: cubeShader.vertexShader,
+      uniforms: cubeShader.uniforms,
+      depthWrite: false,
+      side: THREE.BackSide
+      });"""
+    ) as ShaderMaterial
+
+    Mesh(BoxGeometry(1000000, 1000000, 1000000), skyboxMaterial)
+      .also(scene::add)
+  }
+
   @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
   fun initGui() {
 
@@ -250,8 +288,8 @@ class Terrain {
 
           (it.add(this.options, "scalingFactor") as NumberController).apply {
             min(0)
-              .max(50)
-              .step(0.1)
+              .max(4)
+              .step(0.05)
               .onFinishChange { regenerateTerrain() }
           }
 
